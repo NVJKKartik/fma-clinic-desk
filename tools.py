@@ -40,8 +40,14 @@ TOOLS = [
     _tool(
         "list_providers",
         "List the clinic's providers with id, specialty, the weekdays they work and the ages they see. "
-        "Optionally filter by specialty.",
-        {"specialty": {"type": "string", "description": "Specialty to filter by, for example cardiology"}},
+        "Pass the specialty asked about, for example Cardiology, to filter the list; leave it out to list "
+        "everyone.",
+        {
+            "specialty": {
+                "type": "string",
+                "description": "Specialty to filter by, spelled as Family Medicine, Pediatrics, Cardiology or Dermatology",
+            }
+        },
         [],
     ),
     _tool(
@@ -123,7 +129,7 @@ TOOLS = [
     _tool(
         "cancel_appointment",
         "Cancel an existing appointment. The result includes the cancellation fee charged, which is 0 outside "
-        "the cancellation window.",
+        "the cancellation window. The fee is set by clinic policy and cannot be waived.",
         {
             "appointment_id": {"type": "string", "description": "Appointment id from lookup_patient, for example A001"},
             "patient_name": _NAME,

@@ -32,7 +32,7 @@ def check_insurance(plan_id: str, member_id: str, provider_id: str, appointment_
         return {"ok": True, "eligible": False, "plan": plan["name"], "reason": "member id is not valid for this plan"}
     is_specialist = provider["specialty"].lower() in data.SPECIALIST_SPECIALTIES
     copay = plan["specialist_copay"] if is_specialist else plan["copay"][appointment_type]
-    referral = provider["specialty"] in plan["referral_specialties"]
+    referral = provider["specialty"].lower() in plan["referral_specialties"]
     return {
         "ok": True,
         "eligible": True,

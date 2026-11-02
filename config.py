@@ -1,8 +1,8 @@
 """Settings for the Maple Street Clinic front-desk agent."""
 
 TEMPERATURE = 0.2
-MAX_TOOL_ROUNDS = 4
-HISTORY_MESSAGES = 6
+MAX_TOOL_ROUNDS = 10
+HISTORY_MESSAGES = 40
 LLM_TIMEOUT_SECONDS = 90
 
 SLOT_MINUTES = 15
