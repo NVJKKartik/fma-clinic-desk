@@ -6,6 +6,7 @@ the standard library. Behaviour is set by instructions.md; patients and appointm
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import urllib.request
@@ -68,21 +69,50 @@ def _run_tool(call: dict) -> tuple[dict, dict]:
         return arguments, {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
 
 
+# Tool calls and results made in an earlier turn, keyed by the conversation prefix so each
+# conversation only replays its own tools.
+_TOOL_LOGS: dict[str, list[dict]] = {}
+
+
+def _history_key(turns: list[dict]) -> str:
+    blob = json.dumps([[m.get("role"), m.get("content") or ""] for m in turns])
+    return hashlib.sha1(blob.encode("utf-8")).hexdigest()
+
+
 def reply(history: list[dict]) -> tuple[str, list[dict]]:
     """The assistant's answer, and the tools it ran to give it."""
     turns = [m for m in history if m.get("role") in ("user", "assistant")]
     conversation = [{"role": "system", "content": system_prompt()}]
-    conversation += turns[-config.HISTORY_MESSAGES :]
+    prefix: list[dict] = []
+    for message in turns:
+        normalized = {"role": message["role"], "content": message.get("content") or ""}
+        if normalized["role"] == "assistant":
+            conversation += _TOOL_LOGS.get(_history_key(prefix + [normalized]), [])
+        conversation.append(normalized)
+        prefix.append(normalized)
+    extra = conversation[1:][-config.HISTORY_MESSAGES :]
+    while extra and extra[0].get("role") != "user":  # keep tool calls next to their assistant message
+        extra.pop(0)
+    conversation = conversation[:1] + extra
     completed: list[dict] = []
+    pending: list[dict] = []
     for _ in range(config.MAX_TOOL_ROUNDS):
         message = _llm(conversation)
         calls = message.get("tool_calls") or []
         if not calls:
-            return message.get("content") or "", completed
+            content = message.get("content") or ""
+            if pending:
+                _TOOL_LOGS[_history_key(prefix + [{"role": "assistant", "content": content}])] = pending
+                if len(_TOOL_LOGS) > 5000:
+                    _TOOL_LOGS.clear()
+            return content, completed
         conversation.append(message)
+        pending.append(message)
         for call in calls:
             arguments, result = _run_tool(call)
-            conversation.append({"role": "tool", "tool_call_id": call["id"], "content": json.dumps(result)})
+            tool_message = {"role": "tool", "tool_call_id": call["id"], "content": json.dumps(result)}
+            conversation.append(tool_message)
+            pending.append(tool_message)
             completed.append(
                 {
                     "id": uuid.uuid4().hex,

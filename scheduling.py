@@ -238,7 +238,7 @@ def cancel_appointment(appointment_id: str, patient_name: str, date_of_birth: st
         until = _start(found["date"], found["time"]) - datetime.now()
         if until <= timedelta(0):
             return {"ok": False, "error": "that appointment has already started or passed"}
-        hours_until = until.seconds / 3600
+        hours_until = until.total_seconds() / 3600
         fee = config.CANCELLATION_FEE if hours_until < config.CANCELLATION_WINDOW_HOURS else 0
         del data.APPOINTMENTS[appointment_id]
         return {"ok": True, "cancelled": patients.public_appointment(found), "fee": fee}
