@@ -36,6 +36,12 @@ TOOLS = [
         {"order_id": _ORDER, "reason": {"type": "string", "description": "Why the customer wants a refund"}},
         ["order_id", "reason"],
     ),
+    _tool(
+        "refund_status",
+        "A refund request and the store manager's decision so far: awaiting manager approval, approved or declined.",
+        {"request_id": {"type": "string", "description": "The refund request id, for example R-1A2B3C"}},
+        ["request_id"],
+    ),
 ]
 
 
@@ -65,4 +71,7 @@ def run_tool(name: str, arguments: dict) -> dict:
         return _call("GET", f"/orders/{order}/history")
     if name == "request_refund":
         return _call("POST", "/refunds", {"order_id": arguments.get("order_id"), "reason": arguments.get("reason") or ""})
+    if name == "refund_status":
+        request = urllib.parse.quote(str(arguments.get("request_id") or "").strip(), safe="")
+        return _call("GET", f"/refunds/{request}")
     return {"ok": False, "error": f"unknown tool {name}"}

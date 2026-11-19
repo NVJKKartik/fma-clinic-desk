@@ -13,9 +13,18 @@ services:
     depends_on:
       - tools-api
   tools-api:
-    build: ./tools_api
-    command: python server.py
+    build: .
+    command: python tools_api/server.py
     environment:
       PORT: "8081"
+      DATABASE_URL: postgresql://shop:shop@postgres:5432/shop
     ports:
       - "8081:8081"
+    depends_on:
+      - postgres
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: shop
+      POSTGRES_PASSWORD: shop
+      POSTGRES_DB: shop
