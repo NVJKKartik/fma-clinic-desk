@@ -1,0 +1,6 @@
+livekit-agents==1.5.17
+livekit-plugins-deepgram==1.5.17
+livekit-plugins-openai==1.5.17
+livekit-plugins-silero==1.5.17
+openai==2.41.1
+httpx==0.28.1
