@@ -21,7 +21,8 @@ from pathlib import Path
 import psycopg
 from psycopg.rows import dict_row
 
-SCHEMA = Path(__file__).resolve().parent.parent / "db" / "schema.sql"
+# The schema, when this service can see it: Postgres's own init applies it under Compose.
+SCHEMAS = (Path(__file__).resolve().parent.parent / "db" / "schema.sql", Path.cwd() / "db" / "schema.sql")
 SEED_ORDERS = [
     ("B-1001", "Ana Ruiz", "The Left Hand of Darkness", Decimal("18.50"), "delivered"),
     ("B-1002", "Bo Lindqvist", "A Wizard of Earthsea (boxed set)", Decimal("64.00"), "delivered"),
@@ -41,10 +42,14 @@ def _connect():
 
 
 def setup() -> None:
-    """The schema, and the shop's orders when the database holds none."""
-    schema = (Path(os.environ.get("SCHEMA_PATH", "")) if os.environ.get("SCHEMA_PATH") else SCHEMA)
+    """The schema when this service can see it and the tables are missing, and the shop's orders when the database
+    holds none."""
+    schema = next((path for path in SCHEMAS if path.is_file()), None)
     with _connect() as db:
-        db.execute(schema.read_text(encoding="utf-8"))
+        if schema is not None:
+            db.execute(schema.read_text(encoding="utf-8"))
+        if db.execute("SELECT to_regclass('orders') IS NULL AS missing").fetchone()["missing"]:
+            return
         if db.execute("SELECT count(*) AS n FROM orders").fetchone()["n"] == 0:
             for row in SEED_ORDERS:
                 db.execute("INSERT INTO orders VALUES (%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING", row)
@@ -131,7 +136,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main() -> None:
     setup()
-    ThreadingHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "8081"))), Handler).serve_forever()
+    ThreadingHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "8080"))), Handler).serve_forever()
 
 
 if __name__ == "__main__":
